@@ -2,3 +2,6 @@
 
 pub mod ffi;
 pub mod library;
+pub mod prelude {
+    pub use crate::library::*;
+}
