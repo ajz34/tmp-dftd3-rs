@@ -35,8 +35,6 @@ jobs:
         - uses: conda-incubator/setup-miniconda@v3
         - name: Run tests with external dependencies
           run: |
-            conda init bash
-            conda activate base
             conda install dftd3-python -c conda-forge
             ls /usr/share/miniconda/lib
             DFTD3_DIR=/usr/share/miniconda/lib cargo test -vv
