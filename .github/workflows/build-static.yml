@@ -24,6 +24,7 @@ jobs:
         - uses: conda-incubator/setup-miniconda@v3
         - name: Run tests with external dependencies
           run: |
+            conda init
             conda activate base
             conda install dftd3-python -c conda-forge
             ls $(conda info --base)/lib
@@ -36,6 +37,7 @@ jobs:
         - uses: conda-incubator/setup-miniconda@v3
         - name: Run tests with external dependencies
           run: |
+            conda init
             conda activate base
             conda install dftd3-python -c conda-forge
             ls $(conda info --base)/lib
