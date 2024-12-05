@@ -72,6 +72,5 @@ fn main() {
             println!("cargo:rustc-link-search=native={}/lib", dst.display());
         }
         println!("cargo:rustc-link-lib=s-dftd3");
-        println!("cargo:rustc-link-lib=mctc-lib");
     }
 }
