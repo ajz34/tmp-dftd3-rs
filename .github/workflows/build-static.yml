@@ -37,4 +37,4 @@ jobs:
           run: |
             conda install dftd3-python -c conda-forge
             ls /usr/share/miniconda/lib
-            DFTD3_DIR=/usr/share/miniconda/lib cargo test -vv
+            LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/share/miniconda/lib cargo test -vv
