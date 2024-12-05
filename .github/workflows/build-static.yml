@@ -25,8 +25,7 @@ jobs:
         - name: Run tests with external dependencies
           run: |
             conda install dftd3-python -c conda-forge
-            export DFTD3_DIR=$(dirname $(dirname `which python`))/lib
-            cargo test -vv --features="static"
+            DFTD3_DIR=$(dirname $(dirname `which python`))/lib cargo test -vv --features="static"
 
     external-shared:
         runs-on: ubuntu-latest
@@ -36,5 +35,4 @@ jobs:
         - name: Run tests with external dependencies
           run: |
             conda install dftd3-python -c conda-forge
-            export DFTD3_DIR=$(dirname $(dirname `which python`))/lib
-            cargo test -vv
+            DFTD3_DIR=$(dirname $(dirname `which python`))/lib cargo test -vv
