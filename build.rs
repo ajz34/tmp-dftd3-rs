@@ -65,13 +65,14 @@ fn main() {
             let path = std::fs::canonicalize(path).unwrap();
             let path = path.parent().unwrap().display();
             println!("cargo:rustc-link-search=native={}", path);
+            println!("cargo:rustc-link-lib=s-dftd3");
         } else {
             let dst = cmake::Config::new("external_deps")
                 .define("BUILD_SHARED_LIBS", "1")
                 .build();
             println!("cargo:rustc-link-search=native={}/lib", dst.display());
+            println!("cargo:rustc-link-lib=mctc-lib");
+            println!("cargo:rustc-link-lib=s-dftd3");
         }
-        println!("cargo:rustc-link-lib=s-dftd3");
-        println!("cargo:rustc-link-lib=mctc-lib");
     }
 }

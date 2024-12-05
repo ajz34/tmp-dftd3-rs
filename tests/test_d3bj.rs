@@ -31,24 +31,22 @@ mod test {
         let coords = coords.iter().flatten().map(|&x| x).collect::<Vec<f64>>(); // coordinates needs to be flatten
         let natoms = 18;
         let charges = [6, 6, 6, 6, 6, 6, 35, 1, 1, 1, 1, 1, 16, 1, 6, 1, 1, 1];
-        let latice = [0.0; 9];
-        let periodic = [false; 3];
-        let structure = DFTD3Structure::new(natoms, &charges, &coords, &latice, &periodic);
+        let structure = DFTD3Structure::new(natoms, &charges, &coords, None, None);
         let model = DFTD3Model::new(&structure);
 
         // PW6B95, d3bj
         let param = DFTD3Param::load_rational_damping("PW6B95", false);
-        let disp_result = get_dispersion(&structure, &model, &param);
+        let disp_result = get_dispersion(&structure, &model, &param, true, true);
         assert!((disp_result.0 - -0.01009386).abs() < 1e-7);
 
         // PW6B95, d3zero
         let param = DFTD3Param::load_zero_damping("PW6B95", false);
-        let disp_result = get_dispersion(&structure, &model, &param);
+        let disp_result = get_dispersion(&structure, &model, &param, true, true);
         assert!((disp_result.0 - -0.00574098).abs() < 1e-7);
 
         // PW6B95, d3zero, atm
         let param = DFTD3Param::load_zero_damping("PW6B95", true);
-        let disp_result = get_dispersion(&structure, &model, &param);
+        let disp_result = get_dispersion(&structure, &model, &param, true, true);
         assert!((disp_result.0 - -0.00574289).abs() < 1e-7);
 
         /*

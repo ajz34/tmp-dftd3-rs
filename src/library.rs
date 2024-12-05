@@ -1,5 +1,6 @@
 use crate::ffi;
 use std::ffi::{c_char, c_int, CStr};
+use std::ptr::{null, null_mut};
 use std::result::Result;
 
 /// Get the version of the DFTD3 library.
@@ -114,8 +115,8 @@ impl DFTD3Structure {
         natoms: usize,
         numbers: &[usize],
         positions: &[f64],
-        lattice: &[f64],
-        periodic: &[bool],
+        lattice: Option<&[f64]>,
+        periodic: Option<&[bool]>,
     ) -> Result<Self, DFTD3Error> {
         // check dimension
         if numbers.len() != natoms {
@@ -132,12 +133,15 @@ impl DFTD3Structure {
                 positions.len()
             )));
         }
-        if lattice.len() != 9 {
+        if lattice.is_some_and(|lattice| lattice.len() != 9) {
             return Err(DFTD3Error::Rust(format!(
                 "Invalid dimension for lattice, expected 9, got {}",
-                lattice.len()
+                lattice.unwrap().len()
             )));
         }
+        // unwrap optional values
+        let lattice_ptr = lattice.map_or(null(), |x| x.as_ptr());
+        let periodic_ptr = periodic.map_or(null(), |x| x.as_ptr());
         // type conversion from usual definitions
         let natoms_c_int = natoms as c_int;
         let atomic_numbers = numbers.iter().map(|&x| x as c_int).collect::<Vec<c_int>>();
@@ -149,8 +153,8 @@ impl DFTD3Structure {
                 natoms_c_int,
                 atomic_numbers.as_ptr(),
                 positions.as_ptr(),
-                lattice.as_ptr(),
-                periodic.as_ptr(),
+                lattice_ptr,
+                periodic_ptr,
             )
         };
         match error.check() {
@@ -171,14 +175,14 @@ impl DFTD3Structure {
         natoms: usize,
         numbers: &[usize],
         positions: &[f64],
-        lattice: &[f64],
-        periodic: &[bool],
+        lattice: Option<&[f64]>,
+        periodic: Option<&[bool]>,
     ) -> Self {
         Self::new_f(natoms, numbers, positions, lattice, periodic).unwrap()
     }
 
     /// Update coordinates and lattice parameters (quantities in Bohr) (failable)
-    pub fn update_f(&self, positions: &[f64], lattice: &[f64]) -> Result<(), DFTD3Error> {
+    pub fn update_f(&self, positions: &[f64], lattice: Option<&[f64]>) -> Result<(), DFTD3Error> {
         // check dimension
         if positions.len() != 3 * self.natoms {
             return Err(DFTD3Error::Rust(format!(
@@ -187,12 +191,14 @@ impl DFTD3Structure {
                 positions.len()
             )));
         }
-        if lattice.len() != 9 {
+        if lattice.is_some_and(|lattice| lattice.len() != 9) {
             return Err(DFTD3Error::Rust(format!(
                 "Invalid dimension for lattice, expected 9, got {}",
-                lattice.len()
+                lattice.unwrap().len()
             )));
         }
+        // unwrap optional values
+        let lattice_ptr = lattice.map_or(null(), |x| x.as_ptr());
         // actual driver for updating the structure
         let mut error = DFTD3Error::new();
         unsafe {
@@ -200,7 +206,7 @@ impl DFTD3Structure {
                 error.get_c_ptr(),
                 self.ptr,
                 positions.as_ptr(),
-                lattice.as_ptr(),
+                lattice_ptr,
             )
         };
         match error.check() {
@@ -215,7 +221,7 @@ impl DFTD3Structure {
     ///
     /// * `positions` - positions [natoms][3]
     /// * `lattice` - lattice [3][3]
-    pub fn update(&self, positions: &[f64], lattice: &[f64]) {
+    pub fn update(&self, positions: &[f64], lattice: Option<&[f64]>) {
         self.update_f(positions, lattice).unwrap()
     }
 }
@@ -561,13 +567,20 @@ pub fn get_dispersion_f(
     structure: &DFTD3Structure,
     model: &DFTD3Model,
     param: &DFTD3Param,
-) -> Result<(f64, Vec<f64>, Vec<f64>), DFTD3Error> {
+    eval_grad: bool,
+    eval_sigma: bool,
+) -> Result<(f64, Option<Vec<f64>>, Option<Vec<f64>>), DFTD3Error> {
     let natoms = structure.get_natoms();
     let mut energy = 0.0;
-    let mut grad = vec![0.0; 3 * natoms];
-    let mut sigma = vec![0.0; 9];
+    let mut grad = match eval_grad {
+        true => Some(vec![0.0; 3 * natoms]),
+        false => None,
+    };
+    let mut sigma = match eval_sigma {
+        true => Some(vec![0.0; 9]),
+        false => None,
+    };
     let mut error = DFTD3Error::new();
-
     unsafe {
         ffi::dftd3_get_dispersion(
             error.get_c_ptr(),
@@ -575,8 +588,8 @@ pub fn get_dispersion_f(
             model.ptr,
             param.ptr,
             &mut energy,
-            grad.as_mut_ptr(),
-            sigma.as_mut_ptr(),
+            grad.as_mut().map_or(null_mut(), |x| x.as_mut_ptr()),
+            sigma.as_mut().map_or(null_mut(), |x| x.as_mut_ptr()),
         )
     };
     match error.check() {
@@ -590,8 +603,10 @@ pub fn get_dispersion(
     structure: &DFTD3Structure,
     model: &DFTD3Model,
     param: &DFTD3Param,
-) -> (f64, Vec<f64>, Vec<f64>) {
-    get_dispersion_f(structure, model, param).unwrap()
+    eval_grad: bool,
+    eval_sigma: bool,
+) -> (f64, Option<Vec<f64>>, Option<Vec<f64>>) {
+    get_dispersion_f(structure, model, param, eval_grad, eval_sigma).unwrap()
 }
 
 /// Evaluate the pairwise representation of the dispersion energy (failable)
@@ -698,12 +713,10 @@ mod tests {
         let natoms = 2;
         let numbers = vec![1, 1];
         let positions = vec![0.0, 0.0, 0.0, 0.0, 0.0, 1.0];
-        let lattice = vec![10.0, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 10.0];
-        let periodic = vec![false, false, false];
-        let structure = DFTD3Structure::new(natoms, &numbers, &positions, &lattice, &periodic);
+        let structure = DFTD3Structure::new(natoms, &numbers, &positions, None, None);
         let model = DFTD3Model::new(&structure);
         let param = DFTD3Param::load_mrational_damping("B3LYP", false);
-        let (energy, grad, sigma) = get_dispersion(&structure, &model, &param);
+        let (energy, grad, sigma) = get_dispersion(&structure, &model, &param, true, true);
         println!("Dispersion energy: {}", energy);
         println!("Dispersion gradient: {:?}", grad);
         println!("Dispersion sigma: {:?}", sigma);

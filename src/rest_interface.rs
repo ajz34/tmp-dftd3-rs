@@ -40,18 +40,18 @@ pub unsafe fn calc_dftd3_atm_rest_(
     };
 
     // create structure and model
-    let structure = DFTD3Structure::new(natoms, &charges, &coords, &vec![0.0; 9], &vec![false; 3]);
+    let structure = DFTD3Structure::new(natoms, &charges, &coords, None, None);
     let model = DFTD3Model::new(&structure);
 
     // get dispersion energy and gradient
     let result = match corr.as_str() {
         "zero" | "d3zero" | "d3(zero)" | "d3" => {
             let param = DFTD3Param::load_zero_damping(&method, true);
-            get_dispersion(&structure, &model, &param)
+            get_dispersion(&structure, &model, &param, true, true)
         }
         "bj" | "d3bj" | "d3(bj)" | "rational" => {
             let param = DFTD3Param::load_rational_damping(&method, true);
-            get_dispersion(&structure, &model, &param)
+            get_dispersion(&structure, &model, &param, true, true)
         }
         _ => panic!("Unknown damping type"),
     };
@@ -61,7 +61,7 @@ pub unsafe fn calc_dftd3_atm_rest_(
         *energy = result.0;
         let gradient = std::slice::from_raw_parts_mut(gradient, natoms * 3);
         let sigma = std::slice::from_raw_parts_mut(sigma, 3 * 3);
-        gradient.copy_from_slice(&result.1);
-        sigma.copy_from_slice(&result.2);
+        gradient.copy_from_slice(&result.1.unwrap());
+        sigma.copy_from_slice(&result.2.unwrap());
     }
 }
