@@ -9,11 +9,13 @@ This implementation based on C wrapper of original DFT-D3 [dftd3/simple-dftd3](h
 As an example, given molecular information, functional `PW6B95` with D3(BJ) can be evaluated as
 ```rust
 use rest_dftd3::prelude::*;
-let structure = DFTD3Structure::new(natoms, &charges, &coords, &latice, &periodic);
+// if molecule but not periodic system, then `Some(&latice)` and `Some(&periodic)` can be both None
+let structure = DFTD3Structure::new(natoms, &charges, &coords, Some(&latice), Some(&periodic));
 let model = DFTD3Model::new(&structure);
 // d3bj corresponds to rational_damping
 let param = DFTD3Param::load_rational_damping("PW6B95", false);
-let (energy, gradient, sigma) = get_dispersion(&structure, &model, &param);
+// gradient and sigma are optionally evaluated, controlled by last two boolean parameters
+let (energy, gradient, sigma) = get_dispersion(&structure, &model, &param, true, true);
 ```
 
 For details, we refer to [test case](tests/test_d3bj.rs).
